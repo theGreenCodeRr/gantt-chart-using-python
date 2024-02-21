@@ -1,60 +1,45 @@
-import cv2
-import numpy as np
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import pandas as pd
 
-def image_to_point_cloud(image_path, scale_factor=0.01):
-    # Read the image in grayscale
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+# Define the data for the Gantt chart
+tasks_data = {
+    "Task": ["Literature Review", "Prototyping", "Testing", "Enhancing",
+            "Conference Publication","Additional Functionality", "Seminar", "Testing 2nd round", "Enhancing 2nd round",
+             "Thesis Writing", "Pre-defense", "Final Defense"],
 
-    # Get image dimensions
-    height, width = img.shape
+    "Start": ["2024-04-01", "2024-07-01", "2024-09-01", "2024-09-01", "2024-12-01",
+              "2025-03-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-07-01", "2025-11-01", "2026-02-01"],
+              
+    "Finish": ["2024-06-30", "2024-08-31", "2024-11-30", "2024-10-31", 
+                "2025-02-28", "2025-06-30", "2025-07-31", "2025-10-31", "2025-10-31", "2025-11-30", "2025-11-30", "2026-02-28"]
+}
 
-    # Create arrays to store point cloud data
-    points = []
-    intensities = []
+# Create a DataFrame
+df = pd.DataFrame(tasks_data)
+df['Start'] = pd.to_datetime(df['Start'])
+df['Finish'] = pd.to_datetime(df['Finish'])
 
-    # Iterate through each pixel
-    for y in range(height):
-        for x in range(width):
-            # Get intensity value (pixel value)
-            intensity = img[y, x]
+# Define a deeper shade of green
+deeper_green = "#228B22"  # Forest Green
 
-            # Calculate 3D coordinates from pixel coordinates
-            z = intensity * scale_factor
-            points.append([x, y, z])
-            intensities.append(intensity)
+# Plotting
+fig, ax = plt.subplots(figsize=(25, 8))  # Width increased for a wider chart
 
-    return np.array(points), np.array(intensities)
+# Create a Gantt chart with deeper green bars and larger text for labels
+for i, task in enumerate(df['Task']):
+    start = df.loc[i, 'Start']
+    finish = df.loc[i, 'Finish']
+    ax.barh(task, finish - start, left=start, color=deeper_green)
 
-def export_ply(points, intensities, output_file):
-    with open(output_file, 'w') as f:
-        # Write PLY header
-        f.write("ply\n")
-        f.write("format ascii 1.0\n")
-        f.write("element vertex {}\n".format(len(points)))
-        f.write("property float x\n")
-        f.write("property float y\n")
-        f.write("property float z\n")
-        f.write("property uchar red\n")
-        f.write("property uchar green\n")
-        f.write("property uchar blue\n")
-        f.write("end_header\n")
+# Formatting with larger font size for the task labels
+ax.set_yticks(range(len(df['Task'])))
+ax.set_yticklabels(df['Task'], fontsize=20)
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+plt.xticks(rotation=45, fontsize=16)
+plt.title('Research Plan and Future Goals', fontsize=22)
+plt.tight_layout()
 
-        # Write point cloud data
-        for i in range(len(points)):
-            x, y, z = points[i]
-            intensity = intensities[i]
-            # Normalize intensity to [0, 255] for color
-            intensity = np.clip(intensity, 0, 255)
-            red = green = blue = intensity
-            f.write("{} {} {} {} {} {}\n".format(x, y, z, red, green, blue))
-
-if __name__ == "__main__":
-    image_path = "me.jpg"
-    output_ply_file = "me.ply"
-    scale_factor = 0.01  # Adjust this factor to scale the z-coordinate
-
-    points, intensities = image_to_point_cloud(image_path, scale_factor)
-    export_ply(points, intensities, output_ply_file)
-    print("Point cloud saved to:", output_ply_file)
+# Show plot
+plt.show()
